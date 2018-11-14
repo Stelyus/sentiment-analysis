@@ -18,7 +18,6 @@ print('=== Unique y_test ===')
 print(np.unique(np.array(y_test)))
 
 
-
 print('---review---')
 print(X_train[6])
 print('---label---')
