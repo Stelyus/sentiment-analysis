@@ -1,4 +1,6 @@
 from nltk.tokenize import WordPunctTokenizer
+import numpy as np
+from bs4 import BeautifulSoup
 from gensim.models import Word2Vec
 import pandas as pd
 import os
@@ -13,17 +15,13 @@ path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis'
 #texts1 = pd.read_csv(os.path.join(path, 'labeledTrainData.tsv'), sep='\t')['review'].values
 #texts2 = pd.read_csv(os.path.join(path, 'testData.tsv'), sep='\t')['review'].values
 #
-
-import numpy as np
-from bs4 import BeautifulSoup
-
 tok = WordPunctTokenizer()
 
 
 def preprocessing(text):
-  text = BeautifulSoup(x, 'lxml').get_text()
+  text = BeautifulSoup(text, 'lxml').get_text()
   text = re.sub(r'@[A-Za-z0-9]+','',text)
-  text = text.decode("utf-8-sig")
+  # text = text.decode("utf-8-sig")
   text = re.sub("[^a-zA-Z]", " ", text)
   text = re.sub('https?://[A-Za-z0-9./]+','',text)
 
@@ -32,7 +30,7 @@ def preprocessing(text):
   except:
     pass
 
-  words = tok.tokenize(lower_case)
+  words = tok.tokenize(text)
   return (" ".join(words)).strip()
 
 
@@ -42,4 +40,6 @@ df.drop(['id','date','query_string','user'],axis=1,inplace=True)
 # df['pre_clean_len'] = [len(t) for t in df.text]
 
 df['text'] = [preprocessing(x) for x in df.text]
-print(df['text'].head())
+print(df['text'].head(100))
+
+df.to_csv(os.path.join(path, 'text_cleaned.csv'), sep=',')

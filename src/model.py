@@ -1,60 +1,95 @@
-from keras.datasets import imdb
-from keras.preprocessing import sequence
-from keras import Sequential
-from keras.layers import Embedding, LSTM, Dense, Dropout
 import numpy as np
-import sys
-
-# Number of different word you want to learn
-vocabulary_size = 5000
-(X_train, y_train), (X_test, y_test) = imdb.load_data(num_words=vocabulary_size)
-print('Loaded dataset with {} training samples, {} test samples'.format(len(X_train), len(X_test)))
-
-
-print('=== Unique y_train ===')
-print(np.unique(np.array(y_train)))
-
-print('=== Unique y_test ===')
-print(np.unique(np.array(y_test)))
+import keras
+from keras.layers import Embedding
+from preprocessing_git import data_preprocessing
+from sentiment_vectors import  wv_afin, wv_emoji_valence, wv_depech_mood, \
+      wv_emoji_sentiment_lexicon, wv_opinion_lexicon_english, wv_emolex
 
 
-print('---review---')
-print(X_train[6])
-print('---label---')
-print(y_train[6])
+EMBEDDING_DIM = 348
+
+def get_max_len(tweets, tokenizer):
+  tweets = [max(tokenizer.texts_to_sequences(tweet), key=len) for tweet in tweets]
+  return max(tweets, key=len)
 
 
-word2id = imdb.get_word_index()
-id2word = {i: word for word, i in word2id.items()}
-print('---review with words---')
-print([id2word.get(i, ' ') for i in X_train[6]])
-print('---label---')
-print(y_train[6])
+def prepare_data(corpora3, corpora7):
+    tweet3, sentiment3 = data_preprocessing(corpora3, 'train')
+    tweet7, sentiment7 = data_preprocessing(corpora7, 'test')
+
+    all_tweet = tweet3.append(tweet7)
+
+    tokenizer = keras.preprocessing.text.Tokenizer(filters=' ')
+    tokenizer.fit_on_texts(all_tweet)
+    word_index = tokenizer.word_index
+
+    return word_index, tokenizer, tweet3, tweet7, sentiment3, sentiment7
 
 
-print('Maximum review length: {}'.format(len(max((X_train + X_test), key=len))))
-print('Minimum review length: {}'.format(len(min((X_test + X_test), key=len))))
+def embedding_matrix_sentiment(word_index, w2vpath, sentiment):
+  word2vec = pickle.load(w2vpath)
+  embedding_matrix = np.zeros((len(word_index) + 1, dim))
+  oov = []
+  oov.append((np.random.rand(dim) * 2.0) - 1.0)
+  oov = oov / np.linalg.norm(oov)
 
-max_words = 500
-X_train = sequence.pad_sequences(X_train, maxlen=max_words)
-X_test = sequence.pad_sequences(X_test, maxlen=max_words)
+  path = "../resources/embeddings" 
+  afin_path = os.path.join(path, 'afin')
+  ev_path = os.path.join(path, 'ev')
+  depech_path = os.path.join(path, 'depech')
+  emolex_path= os.path.join(path, 'emolex')
+  emoji_path = os.path.join(path, 'emoji_sentiment_lexicon')
+  opi_path = os.path.join(path, 'opinion_lexicon')
+
+  # Load sentiment vectors
+  sentiment_wv_dict = {
+    'afin': [pickle.load(open(afin_path)), wv_afin],
+    'ev': [pickle.load(open(ev_path)), wv_emoji_valence],
+    'depech': [pickle.load(open(depech_path)), wv_depech_mood],
+    'emolex': [pickle.load(open(emolex_path)), wv_emolex],
+    'emoji': [pickle.load(open(emoji_path)), wv_emoji_sentiment_lexicon],
+    'opinion': [pickle.load(open(opi_path)), wv_opinion_lexicon_english]
+  }
 
 
-# Lengths of the vector..
-embedding_size=32
+  for word, i in word_index.items():
+      if word in word2vec.vocab:
+          embedding_matrix[i] = concatenateEmbeding(word, word2vec, sentiment_wv_dict)
+      else:
+          embedding_matrix[i] = oov
 
-model=Sequential()
-model.add(Embedding(vocabulary_size, embedding_size, input_length=max_words))
-model.add(LSTM(100))
-model.add(Dense(1, activation='sigmoid'))
-print(model.summary())
+  return embedding_matrix
 
-model.compile(loss='binary_crossentropy', 
-             optimizer='adam', 
-             metrics=['accuracy'])
 
-batch_size = 64
-num_epochs = 3
-X_valid, y_valid = X_train[:batch_size], y_train[:batch_size]
-X_train2, y_train2 = X_train[batch_size:], y_train[batch_size:]
-model.fit(X_train2, y_train2, validation_data=(X_valid, y_valid), batch_size=batch_size, epochs=num_epochs)
+
+def concatenate_word_vectors(word, word2vec, wv_sentiment_dict):
+  concat = [word2vec[word]]
+  for keys in wv_sentiment_dict:
+    dictionary, fct  = wv_sentiment_dict[keys]
+    concat.append(fct(dictionary, word))
+
+  return np.concatenate(concat)
+
+if __name__ == '__main__':
+  corpora_train_3 = '../resources/data_train_3.csv'
+  corpora_train_7 = '../resources/data_train_7.csv'
+  corpora_test_7 = "'../resources/data_test_7.csv'"
+  word2vec_path = '../resources/datastories.twitter.300d.pickle'
+
+  word_index, tokenizer, tweet3, tweet7, sentiment3, sentiment7 = prepare_data(corpora_train_3, corpora_train_7)
+  #model = Word2Vec.load('../resources/model_5M.bin')
+  #saveKeyedVectors('../resources/model2.kv', model)
+  
+  MAX_SEQUENCE_LENGTH = get_max_len([corpora_train_3, corpora_train_7], tokenizer)
+
+  embedding_matrix = embedding_matrix_sentiment(word_index, word2vec_path, EMBEDDING_DIM)
+
+  x_train_3, x_val_3, y_train_3, y_val_3 = getTrainAndTestData3(tweet3, sentiment3, MAX_SEQUENCE_LENGTH, tokenizer)
+  embedding_layer = Embedding(len(word_index) + 1,
+                          EMBEDDING_DIM,
+                          weights=[embedding_matrix],
+                          input_length=MAX_SEQUENCE_LENGTH,
+                          trainable=False, name='embedding_layer')
+
+  model1(x_train_3, y_train_3,x_val_3, y_val_3, embedding_layer)
+
