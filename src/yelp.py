@@ -9,7 +9,7 @@ from keras.layers import Dense, Embedding, LSTM
 from sklearn.model_selection import train_test_split
 
 
-path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis'
+path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis/dataset'
 yelp_path = 'yelp.csv'
 
 df = pd.read_csv(os.path.join(path, yelp_path))

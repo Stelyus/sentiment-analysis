@@ -1,5 +1,9 @@
 import numpy as np
+import pickle
 import keras
+import os
+import sys
+from keras.utils.np_utils import to_categorical
 from keras.layers import Embedding
 from preprocessing_git import data_preprocessing
 from sentiment_vectors import  wv_afin, wv_emoji_valence, wv_depech_mood, \
@@ -9,10 +13,9 @@ from sentiment_vectors import  wv_afin, wv_emoji_valence, wv_depech_mood, \
 EMBEDDING_DIM = 348
 
 def get_max_len(tweets, tokenizer):
-  tweets = [max(tokenizer.texts_to_sequences(tweet), key=len) for tweet in tweets]
-  return max(tweets, key=len)
+  return len(max([max(tokenizer.texts_to_sequences(tweet), key=len) for tweet in tweets], key=len))
 
-
+# Specific for the csv
 def prepare_data(corpora3, corpora7):
     tweet3, sentiment3 = data_preprocessing(corpora3, 'train')
     tweet7, sentiment7 = data_preprocessing(corpora7, 'test')
@@ -25,12 +28,29 @@ def prepare_data(corpora3, corpora7):
 
     return word_index, tokenizer, tweet3, tweet7, sentiment3, sentiment7
 
+def get_train_test(tweet, sentiment, max_len, tokenizer):
+    sequences_train = tokenizer.texts_to_sequences(tweet)
+
+    data_train = keras.preprocessing.sequence.pad_sequences(sequences_train, maxlen=max_len)
+    indices_train = np.arange(data_train.shape[0])
+    data_train = data_train[indices_train]
+
+    labels_train = to_categorical(np.asarray(sentiment), 3)
+    labels_train = labels_train[indices_train]
+
+    split_idx = int(len(data_train) * 0.70)
+    x_train, x_val = data_train[:split_idx], data_train[split_idx:]
+    y_train, y_val = labels_train[:split_idx], labels_train[split_idx:]
+
+    return x_train, x_val, y_train, y_val
+
+
 
 def embedding_matrix_sentiment(word_index, w2vpath, sentiment):
-  word2vec = pickle.load(w2vpath)
-  embedding_matrix = np.zeros((len(word_index) + 1, dim))
+  word2vec = pickle.load(open(w2vpath, 'rb'))
+  embedding_matrix = np.zeros((len(word_index) + 1, EMBEDDING_DIM))
   oov = []
-  oov.append((np.random.rand(dim) * 2.0) - 1.0)
+  oov.append((np.random.rand(EMBEDDING_DIM) * 2.0) - 1.0)
   oov = oov / np.linalg.norm(oov)
 
   path = "../resources/embeddings" 
@@ -43,18 +63,18 @@ def embedding_matrix_sentiment(word_index, w2vpath, sentiment):
 
   # Load sentiment vectors
   sentiment_wv_dict = {
-    'afin': [pickle.load(open(afin_path)), wv_afin],
-    'ev': [pickle.load(open(ev_path)), wv_emoji_valence],
-    'depech': [pickle.load(open(depech_path)), wv_depech_mood],
-    'emolex': [pickle.load(open(emolex_path)), wv_emolex],
-    'emoji': [pickle.load(open(emoji_path)), wv_emoji_sentiment_lexicon],
-    'opinion': [pickle.load(open(opi_path)), wv_opinion_lexicon_english]
+    'afin': [pickle.load(open(afin_path, 'rb')), wv_afin],
+    'ev': [pickle.load(open(ev_path, 'rb')), wv_emoji_valence],
+    'depech': [pickle.load(open(depech_path,'rb')), wv_depech_mood],
+    'emolex': [pickle.load(open(emolex_path, 'rb')), wv_emolex],
+    'emoji': [pickle.load(open(emoji_path, 'rb')), wv_emoji_sentiment_lexicon],
+    'opinion': [pickle.load(open(opi_path, 'rb')), wv_opinion_lexicon_english]
   }
 
 
   for word, i in word_index.items():
-      if word in word2vec.vocab:
-          embedding_matrix[i] = concatenateEmbeding(word, word2vec, sentiment_wv_dict)
+      if word in word2vec:
+          embedding_matrix[i] = concatenate_word_vectors(word, word2vec, sentiment_wv_dict)
       else:
           embedding_matrix[i] = oov
 
@@ -80,16 +100,16 @@ if __name__ == '__main__':
   #model = Word2Vec.load('../resources/model_5M.bin')
   #saveKeyedVectors('../resources/model2.kv', model)
   
-  MAX_SEQUENCE_LENGTH = get_max_len([corpora_train_3, corpora_train_7], tokenizer)
+  MAX_SEQUENCE_LENGTH = get_max_len([tweet3, tweet7], tokenizer)
 
   embedding_matrix = embedding_matrix_sentiment(word_index, word2vec_path, EMBEDDING_DIM)
 
-  x_train_3, x_val_3, y_train_3, y_val_3 = getTrainAndTestData3(tweet3, sentiment3, MAX_SEQUENCE_LENGTH, tokenizer)
-  embedding_layer = Embedding(len(word_index) + 1,
-                          EMBEDDING_DIM,
-                          weights=[embedding_matrix],
-                          input_length=MAX_SEQUENCE_LENGTH,
-                          trainable=False, name='embedding_layer')
-
-  model1(x_train_3, y_train_3,x_val_3, y_val_3, embedding_layer)
-
+  x_train_3, x_val_3, y_train_3, y_val_3 = get_train_test(tweet3, sentiment3, MAX_SEQUENCE_LENGTH, tokenizer)
+  #embedding_layer = Embedding(len(word_index) + 1,
+                          #EMBEDDING_DIM,
+                          #weights=[embedding_matrix],
+                          #input_length=MAX_SEQUENCE_LENGTH,
+                          #trainable=False, name='embedding_layer')
+#
+  #model1(x_train_3, y_train_3,x_val_3, y_val_3, embedding_layer)
+#
