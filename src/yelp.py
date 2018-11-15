@@ -28,9 +28,6 @@ tokenizer.fit_on_texts(texts)
 X = tokenizer.texts_to_sequences(texts)
 X = pad_sequences(X)
 
-#items = {v: k for k, v in tokenizer.word_index.items() }
-#print([items.get(x, ' ') for x in X[0]])
-
 embed_dim = 128
 lstm_out = 200
 batch_size = 32
