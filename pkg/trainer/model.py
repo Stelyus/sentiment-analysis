@@ -1,4 +1,5 @@
 import numpy as np
+from keras.optimizers import Adam
 import pickle
 import keras
 import os
@@ -29,7 +30,7 @@ def prepare_data(corpora3, corpora7):
     tokenizer.fit_on_texts(all_tweet)
     word_index = tokenizer.word_index
 
-    return word_index, tokenizer, tweet3, tweet7, sentimen3, sentiment7
+    return word_index, tokenizer, tweet3, tweet7, sentiment3, sentiment7
 
 def get_train_test(tweet, sentiment, max_len, tokenizer):
     sequences_train = tokenizer.texts_to_sequences(tweet)
@@ -55,7 +56,8 @@ def embedding_matrix_sentiment(word_index, w2vpath, sentiment):
   oov.append((np.random.rand(EMBEDDING_DIM) * 2.0) - 1.0)
   oov = oov / np.linalg.norm(oov)
 
-  path = "../resources/embeddings" 
+  #path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources/embeddings'
+  path = "gs://stelyus_bucket1/resources/embeddings"
   afin_path = os.path.join(path, 'afin')
   ev_path = os.path.join(path, 'ev')
   depech_path = os.path.join(path, 'depech')
@@ -111,11 +113,15 @@ def concatenate_word_vectors(word, word2vec, wv_sentiment_dict):
 
   return np.concatenate(concat)
 
-if __name__ == '__main__':
-  corpora_train_3 = '../resources/data_train_3.csv'
-  corpora_train_7 = '../resources/data_train_7.csv'
-  corpora_test_7 = "'../resources/data_test_7.csv'"
-  word2vec_path = '../resources/datastories.twitter.300d.pickle'
+
+def train_model():
+
+  #path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources'
+  path = "gs://stelyus_bucket1/resources"
+  corpora_train_3 = os.path.join(path, 'data_train_3.csv')
+  corpora_train_7 = os.path.join(path, 'data_train_7.csv')
+  corpora_test_7 = os.path.join(path, 'data_test_7.csv')
+  word2vec_path = os.path.join(path, 'datastories.twitter.300d.pickle')
 
   word_index, tokenizer, tweet3, tweet7, sentiment3, sentiment7 = prepare_data(corpora_train_3, corpora_train_7)
   MAX_SEQUENCE_LENGTH = get_max_len([tweet3, tweet7], tokenizer)
