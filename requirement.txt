@@ -1,0 +1,10 @@
+lxml
+gensim
+keras
+beautifulsoup4
+pandas
+numpy
+nltk
+tensorflow
+git+https://github.com/erikavaris/tokenizer.git
+docopt

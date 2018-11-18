@@ -10,12 +10,7 @@ import os
 import sys
 #EMOTICONS_FILE = pkg_resources.resource_filename('tokenizer', 'data/emoticons.txt')
 
-GOOGLE_BUCKET_PATH = "gs://stelyus_bucket1/resources"
-EMOTICONS_FILE = "emoticons.txt"
-
-subprocess.check_call(['gsutil', 'cp', os.path.join(GOOGLE_BUCKET_PATH,
-                                                    EMOTICONS_FILE),
-                       EMOTICONS_FILE], stderr=sys.stdout)
+EMOTICONS_FILE = "data/emoticons.txt"
 
 
 #urls - nltk version

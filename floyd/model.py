@@ -57,7 +57,7 @@ def embedding_matrix_sentiment(word_index, w2vpath, sentiment):
   oov = oov / np.linalg.norm(oov)
 
   #path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources/embeddings'
-  path = "gs://stelyus_bucket1/resources/embeddings"
+  path = "/floyd/input/dataset/embeddings"
   afin_path = os.path.join(path, 'afin')
   ev_path = os.path.join(path, 'ev')
   depech_path = os.path.join(path, 'depech')
@@ -117,7 +117,7 @@ def concatenate_word_vectors(word, word2vec, wv_sentiment_dict):
 def train_model():
 
   #path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources'
-  path = "gs://stelyus_bucket1/resources"
+  path = "/floyd/input/dataset"
   corpora_train_3 = os.path.join(path, 'data_train_3.csv')
   corpora_train_7 = os.path.join(path, 'data_train_7.csv')
   corpora_test_7 = os.path.join(path, 'data_test_7.csv')

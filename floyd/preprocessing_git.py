@@ -17,6 +17,9 @@ from nltk.corpus import stopwords
 import pandas as pd
 import nltk
 
+nltk.download('wordnet')
+nltk.download('averaged_perceptron_tagger')
+nltk.download("stopwords")
 notstopwords = set(('not', 'no', 'mustn', "mustn\'t"))
 stopwords = set(stopwords.words('english')) - notstopwords
 
