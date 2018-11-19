@@ -9,6 +9,7 @@ from keras.layers.embeddings import Embedding
 from keras.models import Sequential, Model
 from keras.layers import LSTM, Dropout, Dense, Bidirectional,  Flatten, Input, GRU, GaussianNoise
 from keras import regularizers
+from sklearn.model_selection import StratifiedKFold
 from preprocessing_git import data_preprocessing
 from sentiment_vectors import  wv_afin, wv_emoji_valence, wv_depech_mood, \
       wv_emoji_sentiment_lexicon, wv_opinion_lexicon_english, wv_emolex
@@ -31,6 +32,20 @@ def prepare_data(corpora3, corpora7):
     word_index = tokenizer.word_index
 
     return word_index, tokenizer, tweet3, tweet7, sentiment3, sentiment7
+
+
+
+def get_dataset(tweet, sentiment, max_len, tokenizer):
+    sequences_train = tokenizer.texts_to_sequences(tweet)
+    data_train = keras.preprocessing.sequence.pad_sequences(sequences_train, maxlen=max_len)
+    indices_train = np.arange(data_train.shape[0])
+    data_train = data_train[indices_train]
+    labels_train = to_categorical(np.asarray(sentiment), 3)
+    labels_train = labels_train[indices_train]
+
+    return data_train, labels_train
+
+
 
 def get_train_test(tweet, sentiment, max_len, tokenizer):
     sequences_train = tokenizer.texts_to_sequences(tweet)
@@ -55,9 +70,8 @@ def embedding_matrix_sentiment(word_index, w2vpath, sentiment):
   oov = []
   oov.append((np.random.rand(EMBEDDING_DIM) * 2.0) - 1.0)
   oov = oov / np.linalg.norm(oov)
-
-  #path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources/embeddings'
-  path = "/floyd/input/dataset/embeddings"
+  path = "/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources/embeddings"
+  #path = "/floyd/input/dataset/embeddings"
   afin_path = os.path.join(path, 'afin')
   ev_path = os.path.join(path, 'ev')
   depech_path = os.path.join(path, 'depech')
@@ -115,9 +129,8 @@ def concatenate_word_vectors(word, word2vec, wv_sentiment_dict):
 
 
 def train_model():
-
-  #path = '/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources'
-  path = "/floyd/input/dataset"
+  # path = "/floyd/input/dataset"
+  path = "/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources"
   corpora_train_3 = os.path.join(path, 'data_train_3.csv')
   corpora_train_7 = os.path.join(path, 'data_train_7.csv')
   corpora_test_7 = os.path.join(path, 'data_test_7.csv')
@@ -128,11 +141,20 @@ def train_model():
 
   embedding_matrix = embedding_matrix_sentiment(word_index, word2vec_path, EMBEDDING_DIM)
 
-  x_train_3, x_val_3, y_train_3, y_val_3 = get_train_test(tweet3, sentiment3, MAX_SEQUENCE_LENGTH, tokenizer)
+  #x_train_3, x_val_3, y_train_3, y_val_3 = get_train_test(tweet3, sentiment3, MAX_SEQUENCE_LENGTH, tokenizer)
+  x_dataset, y_dataset = get_dataset(tweet3, sentiment3, MAX_SEQUENCE_LENGTH, tokenizer)
+
   embedding_layer = Embedding(len(word_index) + 1,
                           EMBEDDING_DIM,
                           weights=[embedding_matrix],
                           input_length=MAX_SEQUENCE_LENGTH,
                           trainable=False, name='embedding_layer')
-  model1(x_train_3, y_train_3,x_val_3, y_val_3, embedding_layer)
-#
+
+  skf = StratifiedKFold(n_splits=10, random_state=42, shuffle=True)
+
+  for train_index, test_index in skf.split(x_dataset, np.argmax(y_dataset, axis=-1)):
+    print("TRAIN:", train_index, "TEST:", test_index)
+    x_train, x_test = x_dataset[train_index], x_dataset[test_index]
+    y_train, y_test = y_dataset[train_index], y_dataset[test_index]
+    
+    model1(x_train, y_train, x_test , y_test, embedding_layer)

@@ -8,3 +8,4 @@ nltk
 tensorflow
 git+https://github.com/erikavaris/tokenizer.git
 docopt
+sklearn

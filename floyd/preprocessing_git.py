@@ -13,7 +13,6 @@ from nltk import pos_tag
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from string import punctuation
-from nltk.corpus import stopwords
 import pandas as pd
 import nltk
 
@@ -67,7 +66,9 @@ def standardization2(tweet):
     return tweets
 
 def create_dataset_word2Vec(tweet):
-    return standardization2(tweet)
+    new_tweet = standardization2(tweet)
+    return new_tweet
+    
 
 def read_dataset(path):
     df = pd.read_csv(path, sep="\t")
