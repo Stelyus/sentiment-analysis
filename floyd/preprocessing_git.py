@@ -15,12 +15,26 @@ from nltk.corpus import stopwords
 from string import punctuation
 import pandas as pd
 import nltk
+import math
 
-nltk.download('wordnet')
-nltk.download('averaged_perceptron_tagger')
-nltk.download("stopwords")
+from ekphrasis.classes.preprocessor import TextPreProcessor
+from ekphrasis.classes.tokenizer import SocialTokenizer
+from ekphrasis.dicts.emoticons import emoticons
+
+#nltk.download('wordnet')
+#nltk.download('averaged_perceptron_tagger')
+#nltk.download("stopwords")
 notstopwords = set(('not', 'no', 'mustn', "mustn\'t"))
 stopwords = set(stopwords.words('english')) - notstopwords
+text_processor = TextPreProcessor(
+    normalize=['url', 'email', 'user'],
+    fix_html=True,  # fix HTML tokens
+    segmenter="twitter", 
+    corrector="twitter", 
+    unpack_hashtags=True,
+    unpack_contractions=True,
+    spell_correct_elong=True,
+    tokenizer=SocialTokenizer(lowercase=True).tokenize)
 
 lemmatizer = WordNetLemmatizer()
 T = tokenizer.TweetTokenizer(preserve_handles=False, preserve_hashes=False, preserve_case=False, preserve_url=False, regularize=True)
@@ -40,30 +54,17 @@ def data_preprocessing (path_tweets,corpora):
 	data['text'] = data['text'].apply(lambda x: standardization(x))
 	return data['text'], data['class']
 
-
-def standardization(tweet):
-    tweet = re.sub(r"\\u2019", "'",tweet)
-    tweet = re.sub(r"\\u002c", "'",tweet)
-    tweet = re.sub(r" [0-9]+ "," ",tweet)
-    tweets = T.tokenize(tweet)
-    tweets = emoji.str2emoji(tweets)
-    tweets = [lemmatizer.lemmatize(word,grammar[0].lower()) if grammar[0].lower() in ['a','n','v']  else lemmatizer.lemmatize(word) for word,grammar in pos_tag(tweets)]
-    tweets = [tweet for tweet in tweets if (tweet not in punctuation) and (tweet not in stopwords)]
-    tweets = list(filter(lambda x: x.count('.') < 4, tweets))
-    tweet = ' '.join(tweets)
-    return tweet
-
-def standardization2(tweet):
-    tweet = re.sub(r"\\u2019", "'",tweet)
-    tweet = re.sub(r"\\u002c", "'",tweet)
-    tweet = re.sub(r" [0-9]+ "," ",tweet)
-    tweet = re.sub(r"RT ", "", tweet)
-    tweets = T.tokenize(tweet)
-    tweets = emoji.str2emoji(tweets)
-    tweets = [lemmatizer.lemmatize(word,grammar[0].lower()) if grammar[0].lower() in ['a','n','v']  else lemmatizer.lemmatize(word) for word,grammar in pos_tag(tweets)]
-    tweets = [tweet for tweet in tweets if (tweet not in punctuation) and (tweet not in stopwords)]
-    tweets = list(filter(lambda x: x.count('.') < 4, tweets))
-    return tweets
+def preprocessing_two_class(tweet):
+  tweet=' '.join(emoji.str2emoji(tweet.split()))
+  tweets = text_processor.pre_process_doc(tweet)
+  tweets = emoji.str2emoji(tweets)
+  tweets = [lemmatizer.lemmatize(word,grammar[0].lower()) if
+  grammar[0].lower() in ['a','n','v']  else
+  lemmatizer.lemmatize(word) for word,grammar in pos_tag(tweets)]
+  tweets = [tweet for tweet in tweets if (tweet not in
+  punctuation) and (tweet not in stopwords)]
+  tweet = ' '.join(tweets)
+  return tweet
 
 def create_dataset_word2Vec(tweet):
     new_tweet = standardization2(tweet)

@@ -2,6 +2,7 @@ import numpy as np
 from keras.optimizers import Adam
 import pickle
 import keras
+import pandas as pd
 import os
 import sys
 from keras.utils.np_utils import to_categorical
@@ -10,10 +11,9 @@ from keras.models import Sequential, Model
 from keras.layers import LSTM, Dropout, Dense, Bidirectional,  Flatten, Input, GRU, GaussianNoise
 from keras import regularizers
 from sklearn.model_selection import StratifiedKFold
-from preprocessing_git import data_preprocessing
+from preprocessing_git import data_preprocessing, preprocessing_two_class
 from sentiment_vectors import  wv_afin, wv_emoji_valence, wv_depech_mood, \
       wv_emoji_sentiment_lexicon, wv_opinion_lexicon_english, wv_emolex
-
 
 EMBEDDING_DIM = 348
 
@@ -128,6 +128,18 @@ def concatenate_word_vectors(word, word2vec, wv_sentiment_dict):
   return np.concatenate(concat)
 
 
+def train_two_class():
+  path = "/Users/franckthang/Work/PersonalWork/sentiment-analysis/floyd-dataset"
+  resources = os.path.join(path, "text_cleaned.csv")
+
+  # sentiment, text
+  # sentiment 0 = negative
+  # sentiment 4 = positive
+  df = pd.read_csv(resources)
+  df = df.dropna()
+  df['text'] = df['text'].apply(lambda x: preprocessing_two_class(x))
+  df.to_csv(os.path.join(path, "text_preprocessed.csv"))
+
 def train_model():
   # path = "/floyd/input/dataset"
   path = "/Users/franckthang/Work/PersonalWork/sentiment-analysis/resources"
@@ -158,3 +170,6 @@ def train_model():
     y_train, y_test = y_dataset[train_index], y_dataset[test_index]
     
     model1(x_train, y_train, x_test , y_test, embedding_layer)
+
+
+train_two_class()
